@@ -1,8 +1,98 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Thoughts about ML</title><link href="https://arthurlu.github.io/" rel="alternate"></link><link href="https://arthurlu.github.io/feeds/aind.atom.xml" rel="self"></link><id>https://arthurlu.github.io/</id><updated>2017-02-26T10:00:00+08:00</updated><entry><title>5th Week</title><link href="https://arthurlu.github.io/5th-week.html" rel="alternate"></link><published>2017-02-26T10:00:00+08:00</published><updated>2017-02-26T10:00:00+08:00</updated><author><name>YungChun</name></author><id>tag:arthurlu.github.io,2017-02-26:5th-week.html</id><summary type="html">&lt;h1&gt;Summary&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Thoughts about ML</title><link href="https://arthurlu.github.io/" rel="alternate"></link><link href="https://arthurlu.github.io/feeds/aind.atom.xml" rel="self"></link><id>https://arthurlu.github.io/</id><updated>2017-03-08T19:00:00+08:00</updated><entry><title>Implement a Planning Search (Part.1)</title><link href="https://arthurlu.github.io/implement-a-planning-search-part1.html" rel="alternate"></link><published>2017-03-08T19:00:00+08:00</published><updated>2017-03-08T19:00:00+08:00</updated><author><name>YungChun</name></author><id>tag:arthurlu.github.io,2017-03-08:implement-a-planning-search-part1.html</id><summary type="html">&lt;h1&gt;Summary&lt;/h1&gt;
+&lt;p&gt;In this series, I will discuss all the concepts I learned in order to solve deterministic logistics planning problems for an Air Cargo transport system using a planning search agent. &lt;/p&gt;
+&lt;p&gt;In part 1, the main idea is developing an expressive yet carefully constrained language for representing planning problems, PDDL. &lt;/p&gt;
+&lt;h1&gt;Planning Domain Definition Language (PDDL)&lt;/h1&gt;
+&lt;h2&gt;Usage&lt;/h2&gt;
+&lt;p&gt;It's a tool of defining a search problem by describing four things.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Initial state.&lt;/li&gt;
+&lt;li&gt;Actions that are available in a state. It's called action schema.&lt;/li&gt;
+&lt;li&gt;Result of applying an action.&lt;/li&gt;
+&lt;li&gt;Goal test.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;A set of action schemas serves as a definition of a planning domain. A specific problem within the domain is defined with the addition of an initial state and a goal.&lt;/p&gt;
+&lt;h2&gt;What is a state&lt;/h2&gt;
+&lt;p&gt;Each state is represented as a conjunction of fluents that are ground(variable-free), functionless atoms. For example, &lt;strong&gt;Poor ∧ Unknown&lt;/strong&gt; might represent the state of a hapless agent, and a state in a package delivery problem might be &lt;strong&gt;At(Truck1,Melbourne) ∧ At(Truck2,Sydney)&lt;/strong&gt;. Any fluents that are not mentioned are false, and the unique names assumption means that Truck1 and Truck2 are distinct. &lt;/p&gt;
+&lt;p&gt;The following fluents are not allowed in a state: &lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;At(x, y): It is non-ground.&lt;/li&gt;
+&lt;li&gt;¬Poor: It is a negation.&lt;/li&gt;
+&lt;li&gt;At(Father(Fred), Sydney): It uses a function symbol.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;What is fluent&lt;/h2&gt;
+&lt;p&gt;In artificial intelligence, a fluent is a condition that can change over time. For example, the condition “the box is on the table”, if it can change over time, cannot be represented by &lt;strong&gt;On(box, table)&lt;/strong&gt;; a third argument is necessary to the predicate &lt;strong&gt;On&lt;/strong&gt; to specify the time: &lt;strong&gt;On(box, table, t)&lt;/strong&gt; means that the box is on the table at time &lt;strong&gt;t&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;References:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://en.wikipedia.org/wiki/Fluent_(artificial_intelligence)"&gt;Wiki&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;What is action&lt;/h2&gt;
+&lt;p&gt;Actions are described by a set of action schemas that implicitly define the &lt;strong&gt;ACTIONS(s)&lt;/strong&gt; and &lt;strong&gt;RESULT(s, a)&lt;/strong&gt; functions needed to do a problem-solving search. Description of actions needs to specify what changes and what stays the same as the result of the action.&lt;/p&gt;
+&lt;h2&gt;What is action schema&lt;/h2&gt;
+&lt;p&gt;A set of ground (variable-free) actions can be represented by a single action schema.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;Action (Fly(p, from, to),
+    PRECOND:At(p, from) ∧ Plane(p) ∧ Airport(from) ∧ Airport(to)
+    EFFECT:¬At(p, from) ∧ At(p, to))
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;The schema consists of the action name, a list of all the variables used in the schema, a &lt;strong&gt;precondition&lt;/strong&gt; and an &lt;strong&gt;effect&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;We are free to choose whatever values we want to instantiate the variables. For example,&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;Action (Fly(P1, SFO, JFK),
+    PRECOND:At(P1, SFO) ∧ Plane(P1) ∧ Airport(SFO) ∧ Airport(JFK)
+    EFFECT:¬At(P1, SFO) ∧ At(P1, JFK))
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;We say that action a is &lt;strong&gt;applicable&lt;/strong&gt; in state s if the preconditions are satisfied by s.&lt;/p&gt;
+&lt;h2&gt;What is result&lt;/h2&gt;
+&lt;p&gt;The result of executing action a in state s is defined as a state s'  which is represented by the set of fluents formed by starting with s, removing the fluents that appear as negative literals in the action’s effects(what we call the delete list or DEL(a)), and adding the fluents that are positive literals in the action’s effects(what we call the add list or ADD(a)). &lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;RESULT(s, a) = (s − DEL(a)) ∪ ADD(a)
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Simple Examples&lt;/h2&gt;
+&lt;h3&gt;Air cargo transport&lt;/h3&gt;
+&lt;p&gt;Following image shows the PDDL description of an air cargo transportation planning problem.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Air cargo transport" src="/images/2017-03-08/air_cargo.png" /&gt;&lt;/p&gt;
+&lt;p&gt;This problem is defined by:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;* Initial state:
+    Tire(Flat) ∧ Tire(Spare) ∧ At(Flat,Axle) ∧ At(Spare,Trunk)
+* Action schemas:
+    Load(c, p, a), Unload(c, p, a), Fly(p, from, to)
+* Result:
+    * Load: At &amp;quot;airport a&amp;quot;, load &amp;quot;cargo c&amp;quot; into &amp;quot;plane p&amp;quot;.
+    * Unload: At &amp;quot;airport a&amp;quot;, unload &amp;quot;cargo c&amp;quot; from &amp;quot;plane p&amp;quot;.
+    * Fly: &amp;quot;Plane p&amp;quot; flies from &amp;quot;airport from&amp;quot;, to &amp;quot;airport to&amp;quot;.
+* Goal:
+    At(C1, JFK) ∧ At(C2, SFO)
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h3&gt;The spare tire problem&lt;/h3&gt;
+&lt;p&gt;Following image shows the PDDL description of a spare tire planning problem.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Spare tire problem" src="/images/2017-03-08/spare_tire.png" /&gt;&lt;/p&gt;
+&lt;p&gt;This problem is defined by:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;* Initial state:
+    Tire(Flat) ∧ Tire(Spare) ∧ At(Flat,Axle) ∧ At(Spare,Trunk)
+* Action schemas:
+    Remove(obj , loc), PutOn(t, Axle), LeaveOvernight
+* Result:
+    * Remove: Remove &amp;quot;object obj&amp;quot; from &amp;quot;location loc&amp;quot;.
+    * PutOn: Put on &amp;quot;tire t&amp;quot; on &amp;quot;axle Axle&amp;quot;.
+    * LeaveOvernight: Leave the car over night.
+* Goal:
+    At (Spare , Axle )
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h1&gt;Reference&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;Artificial Intelligence: A Modern Approach, Chapter 10, Section 1.&lt;/li&gt;
+&lt;/ul&gt;</summary><category term="Udacity"></category><category term="AI"></category></entry><entry><title>5th Week</title><link href="https://arthurlu.github.io/5th-week.html" rel="alternate"></link><published>2017-02-26T10:00:00+08:00</published><updated>2017-02-26T10:00:00+08:00</updated><author><name>YungChun</name></author><id>tag:arthurlu.github.io,2017-02-26:5th-week.html</id><summary type="html">&lt;h1&gt;Summary&lt;/h1&gt;
 &lt;p&gt;In this week, I learned a concept of how to find an optimal soulution of search problem when the search space is too large. This technique is called Simulated Annealign. Prof. Thad used a classic optimization problem, Traveling Salesman Problem(TSP), to demonstrate the power of Simulated Annealing. Briefly, TSP is a problem that seeks to find the shortest path passing through every city exactly once.&lt;/p&gt;
 &lt;h2&gt;What is Simulated Annealing&lt;/h2&gt;
-&lt;p&gt;&lt;img alt="Simulated Annealing" src="/images/SA_animation.gif" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Simulated Annealing" src="/images/2017-02-26/SA_animation.gif" /&gt;&lt;/p&gt;
 &lt;p&gt;Simulated Annealing is a probablistic technique used for finding an approximate solution to an optimization problem. The main concept behind it is that we don't always used the positive gradient to determine next action instead adding some randomness. Randomness could help escaping from local optimal states and finding the global optimal one. &lt;/p&gt;
 &lt;p&gt;Image Source: &lt;a href="https://commons.wikimedia.org/wiki/File:Hill_Climbing_with_Simulated_Annealing.gif"&gt;Simulated Annealing - By Kingpin13 (Own work) [CC0], via Wikimedia Commons (Attribution not required)&lt;/a&gt;&lt;/p&gt;
 &lt;h2&gt;How to implement Simulated Annealing&lt;/h2&gt;

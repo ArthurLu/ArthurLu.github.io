@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8"> 
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="author" content="YungChun" />
+        <meta name="copyright" content="YungChun" />
+
+        <meta property="og:type" content="article" />
+        <meta name="twitter:card" content="summary">
+
+<meta name="keywords" content="Udacity, AI, AIND, " />
+
+<meta property="og:title" content="Implement a Planning Search (Part.1) "/>
+<meta property="og:url" content="https://arthurlu.github.io/implement-a-planning-search-part1.html" />
+<meta property="og:description" content="Summary In this series, I will discuss all the concepts I learned in order to solve deterministic logistics planning problems for an Air Cargo transport system using a planning search agent. In part 1, the main idea is developing an expressive yet carefully constrained language for representing planning problems, PDDL ..." />
+<meta property="og:site_name" content="Thoughts about ML" />
+<meta property="og:article:author" content="YungChun" />
+<meta property="og:article:published_time" content="2017-03-08T19:00:00+08:00" />
+<meta name="twitter:title" content="Implement a Planning Search (Part.1) ">
+<meta name="twitter:description" content="Summary In this series, I will discuss all the concepts I learned in order to solve deterministic logistics planning problems for an Air Cargo transport system using a planning search agent. In part 1, the main idea is developing an expressive yet carefully constrained language for representing planning problems, PDDL ...">
+
+        <title>Implement a Planning Search (Part.1)  · Thoughts about ML
+</title>
+        <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+        <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.1/css/font-awesome.css" rel="stylesheet">
+        <link rel="stylesheet" type="text/css" href="https://arthurlu.github.io/theme/css/pygments.css" media="screen">
+        <link rel="stylesheet" type="text/css" href="https://arthurlu.github.io/theme/tipuesearch/tipuesearch.css" media="screen">
+        <link rel="stylesheet" type="text/css" href="https://arthurlu.github.io/theme/css/elegant.css" media="screen">
+        <link rel="stylesheet" type="text/css" href="https://arthurlu.github.io/theme/css/custom.css" media="screen">
+        <link href="https://arthurlu.github.io/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Thoughts about ML - Full Atom Feed" />
+    </head>
+    <body>
+        <div id="content-sans-footer">
+        <div class="navbar navbar-static-top">
+            <div class="navbar-inner">
+                <div class="container-fluid">
+                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </a>
+                    <a class="brand" href="https://arthurlu.github.io/"><span class=site-name>Thoughts about ML</span></a>
+                    <div class="nav-collapse collapse">
+                        <ul class="nav pull-right top-menu">
+                            <li ><a href="https://arthurlu.github.io">Home</a></li>
+                            <li ><a href="https://arthurlu.github.io/categories.html">Categories</a></li>
+                            <li ><a href="https://arthurlu.github.io/tags.html">Tags</a></li>
+                            <li ><a href="https://arthurlu.github.io/archives.html">Archives</a></li>
+                            <li><form class="navbar-search" action="https://arthurlu.github.io/search.html" onsubmit="return validateForm(this.elements['q'].value);"> <input type="text" class="search-query" placeholder="Search" name="q" id="tipue_search_input"></form></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container-fluid">
+            <div class="row-fluid">
+                <div class="span1"></div>
+                <div class="span10">
+<article>
+<div class="row-fluid">
+    <header class="page-header span10 offset2">
+    <h1><a href="https://arthurlu.github.io/implement-a-planning-search-part1.html"> Implement a Planning Search (Part.1)  </a></h1>
+    </header>
+</div>
+
+<div class="row-fluid">
+        <div class="span8 offset2 article-content">
+
+            
+            <h1>Summary</h1>
+<p>In this series, I will discuss all the concepts I learned in order to solve deterministic logistics planning problems for an Air Cargo transport system using a planning search agent. </p>
+<p>In part 1, the main idea is developing an expressive yet carefully constrained language for representing planning problems, PDDL. </p>
+<h1>Planning Domain Definition Language (PDDL)</h1>
+<h2>Usage</h2>
+<p>It's a tool of defining a search problem by describing four things.</p>
+<ul>
+<li>Initial state.</li>
+<li>Actions that are available in a state. It's called action schema.</li>
+<li>Result of applying an action.</li>
+<li>Goal test.</li>
+</ul>
+<p>A set of action schemas serves as a definition of a planning domain. A specific problem within the domain is defined with the addition of an initial state and a goal.</p>
+<h2>What is a state</h2>
+<p>Each state is represented as a conjunction of fluents that are ground(variable-free), functionless atoms. For example, <strong>Poor ∧ Unknown</strong> might represent the state of a hapless agent, and a state in a package delivery problem might be <strong>At(Truck1,Melbourne) ∧ At(Truck2,Sydney)</strong>. Any fluents that are not mentioned are false, and the unique names assumption means that Truck1 and Truck2 are distinct. </p>
+<p>The following fluents are not allowed in a state: </p>
+<ul>
+<li>At(x, y): It is non-ground.</li>
+<li>¬Poor: It is a negation.</li>
+<li>At(Father(Fred), Sydney): It uses a function symbol.</li>
+</ul>
+<h2>What is fluent</h2>
+<p>In artificial intelligence, a fluent is a condition that can change over time. For example, the condition “the box is on the table”, if it can change over time, cannot be represented by <strong>On(box, table)</strong>; a third argument is necessary to the predicate <strong>On</strong> to specify the time: <strong>On(box, table, t)</strong> means that the box is on the table at time <strong>t</strong>.</p>
+<p>References:</p>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/Fluent_(artificial_intelligence)">Wiki</a></li>
+</ul>
+<h2>What is action</h2>
+<p>Actions are described by a set of action schemas that implicitly define the <strong>ACTIONS(s)</strong> and <strong>RESULT(s, a)</strong> functions needed to do a problem-solving search. Description of actions needs to specify what changes and what stays the same as the result of the action.</p>
+<h2>What is action schema</h2>
+<p>A set of ground (variable-free) actions can be represented by a single action schema.</p>
+<div class="highlight"><pre><span></span>Action (Fly(p, from, to),
+    PRECOND:At(p, from) ∧ Plane(p) ∧ Airport(from) ∧ Airport(to)
+    EFFECT:¬At(p, from) ∧ At(p, to))
+</pre></div>
+
+
+<p>The schema consists of the action name, a list of all the variables used in the schema, a <strong>precondition</strong> and an <strong>effect</strong>.</p>
+<p>We are free to choose whatever values we want to instantiate the variables. For example,</p>
+<div class="highlight"><pre><span></span>Action (Fly(P1, SFO, JFK),
+    PRECOND:At(P1, SFO) ∧ Plane(P1) ∧ Airport(SFO) ∧ Airport(JFK)
+    EFFECT:¬At(P1, SFO) ∧ At(P1, JFK))
+</pre></div>
+
+
+<p>We say that action a is <strong>applicable</strong> in state s if the preconditions are satisfied by s.</p>
+<h2>What is result</h2>
+<p>The result of executing action a in state s is defined as a state s'  which is represented by the set of fluents formed by starting with s, removing the fluents that appear as negative literals in the action’s effects(what we call the delete list or DEL(a)), and adding the fluents that are positive literals in the action’s effects(what we call the add list or ADD(a)). </p>
+<div class="highlight"><pre><span></span>RESULT(s, a) = (s − DEL(a)) ∪ ADD(a)
+</pre></div>
+
+
+<h2>Simple Examples</h2>
+<h3>Air cargo transport</h3>
+<p>Following image shows the PDDL description of an air cargo transportation planning problem.</p>
+<p><img alt="Air cargo transport" src="/images/2017-03-08/air_cargo.png" /></p>
+<p>This problem is defined by:</p>
+<div class="highlight"><pre><span></span>* Initial state:
+    Tire(Flat) ∧ Tire(Spare) ∧ At(Flat,Axle) ∧ At(Spare,Trunk)
+* Action schemas:
+    Load(c, p, a), Unload(c, p, a), Fly(p, from, to)
+* Result:
+    * Load: At &quot;airport a&quot;, load &quot;cargo c&quot; into &quot;plane p&quot;.
+    * Unload: At &quot;airport a&quot;, unload &quot;cargo c&quot; from &quot;plane p&quot;.
+    * Fly: &quot;Plane p&quot; flies from &quot;airport from&quot;, to &quot;airport to&quot;.
+* Goal:
+    At(C1, JFK) ∧ At(C2, SFO)
+</pre></div>
+
+
+<h3>The spare tire problem</h3>
+<p>Following image shows the PDDL description of a spare tire planning problem.</p>
+<p><img alt="Spare tire problem" src="/images/2017-03-08/spare_tire.png" /></p>
+<p>This problem is defined by:</p>
+<div class="highlight"><pre><span></span>* Initial state:
+    Tire(Flat) ∧ Tire(Spare) ∧ At(Flat,Axle) ∧ At(Spare,Trunk)
+* Action schemas:
+    Remove(obj , loc), PutOn(t, Axle), LeaveOvernight
+* Result:
+    * Remove: Remove &quot;object obj&quot; from &quot;location loc&quot;.
+    * PutOn: Put on &quot;tire t&quot; on &quot;axle Axle&quot;.
+    * LeaveOvernight: Leave the car over night.
+* Goal:
+    At (Spare , Axle )
+</pre></div>
+
+
+<h1>Reference</h1>
+<ul>
+<li>Artificial Intelligence: A Modern Approach, Chapter 10, Section 1.</li>
+</ul>
+            
+            
+            <hr/>
+        </div>
+        <section>
+        <div class="span2" style="float:right;font-size:0.9em;">
+            <h4>Published</h4>
+            <time pubdate="pubdate" datetime="2017-03-08T19:00:00+08:00">Mar 8, 2017</time>
+            <h4>Category</h4>
+            <a class="category-link" href="https://arthurlu.github.io/categories.html#aind-ref">AIND</a>
+            <h4>Tags</h4>
+            <ul class="list-of-tags tags-in-article">
+                <li><a href="https://arthurlu.github.io/tags.html#ai-ref">AI
+                    <span>2</span>
+</a></li>
+                <li><a href="https://arthurlu.github.io/tags.html#udacity-ref">Udacity
+                    <span>2</span>
+</a></li>
+            </ul>
+<h4>Contact</h4>
+    <a href="http://github.com/arthurlu" title="My github Profile" class="sidebar-social-links" target="_blank">
+    <i class="fa fa-github sidebar-social-links"></i></a>
+    <a href="http://tw.linkedin.com/in/newmilktea" title="My linkedin Profile" class="sidebar-social-links" target="_blank">
+    <i class="fa fa-linkedin sidebar-social-links"></i></a>
+    <a href="mailto:newmilktea@gmail.com" title="My envelope Profile" class="sidebar-social-links" target="_blank">
+    <i class="fa fa-envelope sidebar-social-links"></i></a>
+        </div>
+        </section>
+</div>
+</article>
+                </div>
+                <div class="span1"></div>
+            </div>
+        </div>
+        <div id="push"></div>
+    </div>
+<footer>
+<div id="footer">
+    <ul class="footer-content">
+        <li class="elegant-power">Powered by <a href="http://getpelican.com/" title="Pelican Home Page">Pelican</a>. Theme: <a href="http://oncrashreboot.com/pelican-elegant" title="Theme Elegant Home Page">Elegant</a> by <a href="http://oncrashreboot.com" title="Talha Mansoor Home Page">Talha Mansoor</a></li>
+    </ul>
+</div>
+</footer>            <script src="http://code.jquery.com/jquery.min.js"></script>
+        <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+        <script>
+            function validateForm(query)
+            {
+                return (query.length > 0);
+            }
+        </script>
+
+    
+    </body>
+    <!-- Theme: Elegant built for Pelican
+    License : http://oncrashreboot.com/pelican-elegant -->
+</html>
