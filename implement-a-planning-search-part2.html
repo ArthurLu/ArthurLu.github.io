@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8"> 
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="author" content="YungChun" />
+        <meta name="copyright" content="YungChun" />
+
+        <meta property="og:type" content="article" />
+        <meta name="twitter:card" content="summary">
+
+<meta name="keywords" content="Udacity, AI, AIND, " />
+
+<meta property="og:title" content="Implement a Planning Search (Part.2) "/>
+<meta property="og:url" content="https://arthurlu.github.io/implement-a-planning-search-part2.html" />
+<meta property="og:description" content="Summary Last time, I talked about how to use constrained language for representing planning problems, which is PDDL. Now we should turn our attention to planning algorithms: we can search from the initial state through the space of states, looking for a goal. One of the nice advantages of the ..." />
+<meta property="og:site_name" content="Thoughts about ML" />
+<meta property="og:article:author" content="YungChun" />
+<meta property="og:article:published_time" content="2017-03-21T19:00:00+08:00" />
+<meta name="twitter:title" content="Implement a Planning Search (Part.2) ">
+<meta name="twitter:description" content="Summary Last time, I talked about how to use constrained language for representing planning problems, which is PDDL. Now we should turn our attention to planning algorithms: we can search from the initial state through the space of states, looking for a goal. One of the nice advantages of the ...">
+
+        <title>Implement a Planning Search (Part.2)  · Thoughts about ML
+</title>
+        <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+        <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.1/css/font-awesome.css" rel="stylesheet">
+        <link rel="stylesheet" type="text/css" href="https://arthurlu.github.io/theme/css/pygments.css" media="screen">
+        <link rel="stylesheet" type="text/css" href="https://arthurlu.github.io/theme/tipuesearch/tipuesearch.css" media="screen">
+        <link rel="stylesheet" type="text/css" href="https://arthurlu.github.io/theme/css/elegant.css" media="screen">
+        <link rel="stylesheet" type="text/css" href="https://arthurlu.github.io/theme/css/custom.css" media="screen">
+        <link href="https://arthurlu.github.io/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Thoughts about ML - Full Atom Feed" />
+    </head>
+    <body>
+        <div id="content-sans-footer">
+        <div class="navbar navbar-static-top">
+            <div class="navbar-inner">
+                <div class="container-fluid">
+                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </a>
+                    <a class="brand" href="https://arthurlu.github.io/"><span class=site-name>Thoughts about ML</span></a>
+                    <div class="nav-collapse collapse">
+                        <ul class="nav pull-right top-menu">
+                            <li ><a href="https://arthurlu.github.io">Home</a></li>
+                            <li ><a href="https://arthurlu.github.io/categories.html">Categories</a></li>
+                            <li ><a href="https://arthurlu.github.io/tags.html">Tags</a></li>
+                            <li ><a href="https://arthurlu.github.io/archives.html">Archives</a></li>
+                            <li><form class="navbar-search" action="https://arthurlu.github.io/search.html" onsubmit="return validateForm(this.elements['q'].value);"> <input type="text" class="search-query" placeholder="Search" name="q" id="tipue_search_input"></form></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container-fluid">
+            <div class="row-fluid">
+                <div class="span1"></div>
+                <div class="span10">
+<article>
+<div class="row-fluid">
+    <header class="page-header span10 offset2">
+    <h1><a href="https://arthurlu.github.io/implement-a-planning-search-part2.html"> Implement a Planning Search (Part.2)  </a></h1>
+    </header>
+</div>
+
+<div class="row-fluid">
+        <div class="span8 offset2 article-content">
+
+            
+            <h1>Summary</h1>
+<p>Last time, I talked about how to use constrained language for representing planning problems, which is PDDL.</p>
+<p>Now we should turn our attention to planning algorithms: we can search from the initial state through the space of states, looking for a goal. One of the nice advantages of the declarative representation of action schemas is that we can also search backward from the goal, looking for the initial state.</p>
+<p>This time we are going to talk about two major search algorithms, how they work and what's their advantages and disadvantages. Next time, we will learn a more powerful algorithm to outerperform than these two algorithms.</p>
+<h1>Forward (progression) state-space search</h1>
+<p>Progression search is very straightforward approach. It's starting in the initial state and using the problem’s actions to search forward for a member of the set of goal states. </p>
+<p>Forward search is prone to exploring irrelevant actions because planning problems often have large state spaces. For example, consider the noble task of buying a copy of AI: A Modern Approach from an online bookseller. Suppose there is an action schema Buy(isbn) with effect Own(isbn). ISBNs are 10 digits, so this action schema represents 10 billion ground actions. An uninformed forward-search algorithm would have to start enumerating these 10 billion actions to find one that leads to the goal.</p>
+<h1>Backward (regression) relevant-states search</h1>
+<p>Regression search is starting at the set of states representing the goal and using the inverse of the actions to search backward for the initial state. It is called relevant-states search because we only consider actions that are relevant to the goal (or current state).</p>
+<p>With the help of PDDL, we could be easy implement regression search on planning problem. For example, given a ground goal description g and a ground action a, the regression from g over a gives us a state description g defined by</p>
+<div class="highlight"><pre><span></span>g&#39; = (g − ADD(a)) ∪ Precond(a)
+</pre></div>
+
+
+<p>For example, consider the goal Own(0136042597), given an initial state with 10 billion ISBNs, and the single action schema</p>
+<div class="highlight"><pre><span></span>A = Action(Buy(i), PRECOND:ISBN (i), EFFECT:Own(i)).
+</pre></div>
+
+
+<p>As we mentioned before, forward search without a heuristic would have to start enumerating the 10 billion ground Buy actions. But with backward search, we would unify the goal Own(0136042597) with the effect Own(i), yielding the action Buy(0136042597).</p>
+<p>Backward search keeps the branching factor lower than forward search, for most prob- lem domains. However, the fact that backward search uses state sets rather than individual states makes it harder to come up with good heuristics.</p>
+<h1>Heuristic</h1>
+<p>Heuristic is very important to planning because neither forward nor backward search is efficient without a good heuristic function.</p>
+<p>What is heuristic? It's a function which estimates the distance from a state s to the goal. An <strong>admissible</strong>,  that does not overestimate,  heuristic can be derived by defining a <strong>relaxed problem</strong> that is easier to solve. The exact cost of a solution to this easier problem then becomes the heuristic for the original problem. </p>
+<p>There are two ways we can relax this problem to make it easier: by adding more edges to the graph, making it strictly easier to find a path, or by grouping multiple nodes together, forming an abstraction of the state space that has fewer states, and thus is easier to search. For adding more edges to the graph, we take the <strong>ignore pre- conditions heuristic</strong> as an example, which is droping all preconditions from actions, in other words, every action becomes applicable in every state, and any single goal fluent can be achieved in one step. Then, we count the minimum number of actions required such that the union of those actions’ effects satisfies the goal. This is an instance of the <strong>set-cover problem</strong>.</p>
+<h1>Set-cover problem</h1>
+<p>It's a NP-Hard problem, which means that there is no polynomial time solution available for this problem. But we could apply following simple greedy algorithm which has logn complexity.</p>
+<div class="highlight"><pre><span></span>1) Let I represents set of elements included so far.  Initialize I = {}
+
+2) Do following while I is not same as U.
+    a) Find the set Si in {S1, S2, ... Sm} whose cost effectiveness is 
+       smallest, i.e., the ratio of cost C(Si) and number of newly added 
+       elements is minimum. 
+       Basically we pick the set for which following value is minimum.
+           Cost(Si) / |Si - I|
+    b) Add elements of above picked Si to I, i.e.,  I = I U Si
+</pre></div>
+
+
+<h1>Reference</h1>
+<ul>
+<li>Artificial Intelligence: A Modern Approach, Chapter 10, Section 2.</li>
+<li>Set-cover problem: http://www.geeksforgeeks.org/set-cover-problem-set-1-greedy-approximate-algorithm/</li>
+</ul>
+            
+            
+            <hr/>
+        </div>
+        <section>
+        <div class="span2" style="float:right;font-size:0.9em;">
+            <h4>Published</h4>
+            <time pubdate="pubdate" datetime="2017-03-21T19:00:00+08:00">Mar 21, 2017</time>
+            <h4>Category</h4>
+            <a class="category-link" href="https://arthurlu.github.io/categories.html#aind-ref">AIND</a>
+            <h4>Tags</h4>
+            <ul class="list-of-tags tags-in-article">
+                <li><a href="https://arthurlu.github.io/tags.html#ai-ref">AI
+                    <span>3</span>
+</a></li>
+                <li><a href="https://arthurlu.github.io/tags.html#udacity-ref">Udacity
+                    <span>3</span>
+</a></li>
+            </ul>
+<h4>Contact</h4>
+    <a href="http://github.com/arthurlu" title="My github Profile" class="sidebar-social-links" target="_blank">
+    <i class="fa fa-github sidebar-social-links"></i></a>
+    <a href="http://tw.linkedin.com/in/newmilktea" title="My linkedin Profile" class="sidebar-social-links" target="_blank">
+    <i class="fa fa-linkedin sidebar-social-links"></i></a>
+    <a href="mailto:newmilktea@gmail.com" title="My envelope Profile" class="sidebar-social-links" target="_blank">
+    <i class="fa fa-envelope sidebar-social-links"></i></a>
+        </div>
+        </section>
+</div>
+</article>
+                </div>
+                <div class="span1"></div>
+            </div>
+        </div>
+        <div id="push"></div>
+    </div>
+<footer>
+<div id="footer">
+    <ul class="footer-content">
+        <li class="elegant-power">Powered by <a href="http://getpelican.com/" title="Pelican Home Page">Pelican</a>. Theme: <a href="http://oncrashreboot.com/pelican-elegant" title="Theme Elegant Home Page">Elegant</a> by <a href="http://oncrashreboot.com" title="Talha Mansoor Home Page">Talha Mansoor</a></li>
+    </ul>
+</div>
+</footer>            <script src="http://code.jquery.com/jquery.min.js"></script>
+        <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+        <script>
+            function validateForm(query)
+            {
+                return (query.length > 0);
+            }
+        </script>
+
+    
+    </body>
+    <!-- Theme: Elegant built for Pelican
+    License : http://oncrashreboot.com/pelican-elegant -->
+</html>

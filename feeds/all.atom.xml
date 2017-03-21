@@ -1,5 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Thoughts about ML</title><link href="https://arthurlu.github.io/" rel="alternate"></link><link href="https://arthurlu.github.io/feeds/all.atom.xml" rel="self"></link><id>https://arthurlu.github.io/</id><updated>2017-03-08T19:00:00+08:00</updated><entry><title>Implement a Planning Search (Part.1)</title><link href="https://arthurlu.github.io/implement-a-planning-search-part1.html" rel="alternate"></link><published>2017-03-08T19:00:00+08:00</published><updated>2017-03-08T19:00:00+08:00</updated><author><name>YungChun</name></author><id>tag:arthurlu.github.io,2017-03-08:implement-a-planning-search-part1.html</id><summary type="html">&lt;h1&gt;Summary&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Thoughts about ML</title><link href="https://arthurlu.github.io/" rel="alternate"></link><link href="https://arthurlu.github.io/feeds/all.atom.xml" rel="self"></link><id>https://arthurlu.github.io/</id><updated>2017-03-21T19:00:00+08:00</updated><entry><title>Implement a Planning Search (Part.2)</title><link href="https://arthurlu.github.io/implement-a-planning-search-part2.html" rel="alternate"></link><published>2017-03-21T19:00:00+08:00</published><updated>2017-03-21T19:00:00+08:00</updated><author><name>YungChun</name></author><id>tag:arthurlu.github.io,2017-03-21:implement-a-planning-search-part2.html</id><summary type="html">&lt;h1&gt;Summary&lt;/h1&gt;
+&lt;p&gt;Last time, I talked about how to use constrained language for representing planning problems, which is PDDL.&lt;/p&gt;
+&lt;p&gt;Now we should turn our attention to planning algorithms: we can search from the initial state through the space of states, looking for a goal. One of the nice advantages of the declarative representation of action schemas is that we can also search backward from the goal, looking for the initial state.&lt;/p&gt;
+&lt;p&gt;This time we are going to talk about two major search algorithms, how they work and what's their advantages and disadvantages. Next time, we will learn a more powerful algorithm to outerperform than these two algorithms.&lt;/p&gt;
+&lt;h1&gt;Forward (progression) state-space search&lt;/h1&gt;
+&lt;p&gt;Progression search is very straightforward approach. It's starting in the initial state and using the problem’s actions to search forward for a member of the set of goal states. &lt;/p&gt;
+&lt;p&gt;Forward search is prone to exploring irrelevant actions because planning problems often have large state spaces. For example, consider the noble task of buying a copy of AI: A Modern Approach from an online bookseller. Suppose there is an action schema Buy(isbn) with effect Own(isbn). ISBNs are 10 digits, so this action schema represents 10 billion ground actions. An uninformed forward-search algorithm would have to start enumerating these 10 billion actions to find one that leads to the goal.&lt;/p&gt;
+&lt;h1&gt;Backward (regression) relevant-states search&lt;/h1&gt;
+&lt;p&gt;Regression search is starting at the set of states representing the goal and using the inverse of the actions to search backward for the initial state. It is called relevant-states search because we only consider actions that are relevant to the goal (or current state).&lt;/p&gt;
+&lt;p&gt;With the help of PDDL, we could be easy implement regression search on planning problem. For example, given a ground goal description g and a ground action a, the regression from g over a gives us a state description g defined by&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;g&amp;#39; = (g − ADD(a)) ∪ Precond(a)
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;For example, consider the goal Own(0136042597), given an initial state with 10 billion ISBNs, and the single action schema&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;A = Action(Buy(i), PRECOND:ISBN (i), EFFECT:Own(i)).
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;As we mentioned before, forward search without a heuristic would have to start enumerating the 10 billion ground Buy actions. But with backward search, we would unify the goal Own(0136042597) with the effect Own(i), yielding the action Buy(0136042597).&lt;/p&gt;
+&lt;p&gt;Backward search keeps the branching factor lower than forward search, for most prob- lem domains. However, the fact that backward search uses state sets rather than individual states makes it harder to come up with good heuristics.&lt;/p&gt;
+&lt;h1&gt;Heuristic&lt;/h1&gt;
+&lt;p&gt;Heuristic is very important to planning because neither forward nor backward search is efficient without a good heuristic function.&lt;/p&gt;
+&lt;p&gt;What is heuristic? It's a function which estimates the distance from a state s to the goal. An &lt;strong&gt;admissible&lt;/strong&gt;,  that does not overestimate,  heuristic can be derived by defining a &lt;strong&gt;relaxed problem&lt;/strong&gt; that is easier to solve. The exact cost of a solution to this easier problem then becomes the heuristic for the original problem. &lt;/p&gt;
+&lt;p&gt;There are two ways we can relax this problem to make it easier: by adding more edges to the graph, making it strictly easier to find a path, or by grouping multiple nodes together, forming an abstraction of the state space that has fewer states, and thus is easier to search. For adding more edges to the graph, we take the &lt;strong&gt;ignore pre- conditions heuristic&lt;/strong&gt; as an example, which is droping all preconditions from actions, in other words, every action becomes applicable in every state, and any single goal fluent can be achieved in one step. Then, we count the minimum number of actions required such that the union of those actions’ effects satisfies the goal. This is an instance of the &lt;strong&gt;set-cover problem&lt;/strong&gt;.&lt;/p&gt;
+&lt;h1&gt;Set-cover problem&lt;/h1&gt;
+&lt;p&gt;It's a NP-Hard problem, which means that there is no polynomial time solution available for this problem. But we could apply following simple greedy algorithm which has logn complexity.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;1) Let I represents set of elements included so far.  Initialize I = {}
+
+2) Do following while I is not same as U.
+    a) Find the set Si in {S1, S2, ... Sm} whose cost effectiveness is 
+       smallest, i.e., the ratio of cost C(Si) and number of newly added 
+       elements is minimum. 
+       Basically we pick the set for which following value is minimum.
+           Cost(Si) / |Si - I|
+    b) Add elements of above picked Si to I, i.e.,  I = I U Si
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h1&gt;Reference&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;Artificial Intelligence: A Modern Approach, Chapter 10, Section 2.&lt;/li&gt;
+&lt;li&gt;Set-cover problem: http://www.geeksforgeeks.org/set-cover-problem-set-1-greedy-approximate-algorithm/&lt;/li&gt;
+&lt;/ul&gt;</summary><category term="Udacity"></category><category term="AI"></category></entry><entry><title>Implement a Planning Search (Part.1)</title><link href="https://arthurlu.github.io/implement-a-planning-search-part1.html" rel="alternate"></link><published>2017-03-08T19:00:00+08:00</published><updated>2017-03-08T19:00:00+08:00</updated><author><name>YungChun</name></author><id>tag:arthurlu.github.io,2017-03-08:implement-a-planning-search-part1.html</id><summary type="html">&lt;h1&gt;Summary&lt;/h1&gt;
 &lt;p&gt;In this series, I will discuss all the concepts I learned in order to solve deterministic logistics planning problems for an Air Cargo transport system using a planning search agent. &lt;/p&gt;
 &lt;p&gt;In part 1, the main idea is developing an expressive yet carefully constrained language for representing planning problems, PDDL. &lt;/p&gt;
 &lt;h1&gt;Planning Domain Definition Language (PDDL)&lt;/h1&gt;
